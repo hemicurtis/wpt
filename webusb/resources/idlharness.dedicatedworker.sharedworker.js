@@ -27,6 +27,8 @@ usb_test(async () => {
   idl_array.add_untested_idls('dictionary EventInit {};');
   idl_array.add_untested_idls('interface Navigator {};');
   idl_array.add_untested_idls('interface WorkerNavigator {};');
+  idl_array.add_untested_idls('dictionary PermissionDescriptor {};');
+  idl_array.add_untested_idls('interface PermissionStatus {};');
 
   let {device} = await getFakeDevice();
 
