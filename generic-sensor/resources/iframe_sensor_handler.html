@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>iframe sensor tester</title>
+<script src="/resources/testharness.js"></script>
+<script src="/generic-sensor/generic-sensor-tests.js"></script>
+<script>
+  const mockBackend = initialize_generic_sensor_tests();
+  // 10Hz update period + 50ms threshold.
+  const maxUpdatePeriod = 150;
+  let sensor = null;
+  let lastTimestamp = null;
+
+  window.onmessage = (e) => {
+    if (e.data.command === 'create') {
+      assert_equals(sensor, null);
+      try {
+        sensor = new self[e.data.type]();
+        e.source.postMessage('success', '*');
+      } catch (e) {
+        e.source.postMessage('', '*');
+      }
+    } else if (e.data.command === 'start') {
+      assert_not_equals(sensor, null);
+      try {
+        sensor.start();
+        sensor.onreading = () => lastTimestamp = sensor.timestamp;
+        function onReadingListener() {
+          sensor.removeEventListener('reading', onReadingListener);
+          e.source.postMessage('success', '*');
+        }
+        sensor.addEventListener('reading', onReadingListener);
+      } catch (e) {
+        e.source.postMessage('', '*');
+      }
+    } else if (e.data.command === 'is_suspended') {
+      let cachedTimestamp = lastTimestamp;
+      let timeoutId = setTimeout(() => {
+        e.source.postMessage(cachedTimestamp === lastTimestamp, '*');
+      }, maxUpdatePeriod);
+
+      function suspendListener() {
+        clearTimeout(timeoutId);
+        sensor.removeEventListener('reading', suspendListener);
+        e.source.postMessage(cachedTimestamp === lastTimestamp, '*');
+      }
+      sensor.addEventListener('reading', suspendListener);
+    }
+  }
+
+  window.onbeforeunload = () => {
+    if (sensor) {
+      sensor.stop();
+    }
+    mockBackend.reset();
+  }
+</script>
